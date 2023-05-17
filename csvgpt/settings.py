@@ -35,7 +35,7 @@ SECRET_KEY = 'django-insecure-j&*!hjqs0=pvwzeqm&uwazufgdprly0^x9y0$4570g6u4^e^b_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*', 'chatbotapidev.pythonanywhere.com']
 
 
 # Application definition
