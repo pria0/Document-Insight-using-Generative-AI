@@ -1,7 +1,7 @@
 import boto3
 from django.conf import settings
 from botocore.config import Config
-from geeks_ai_backend.common import generateNanoIdWithPrefix
+from csvgpt.common import generateNanoIdWithPrefix
 
 def getS3BucketKey(userId, fileName):
     key = f"chatbot/{userId}/{generateNanoIdWithPrefix('bot_')}_{fileName}"

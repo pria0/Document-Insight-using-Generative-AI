@@ -2,8 +2,8 @@ from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_delete
 from django.utils.translation import gettext_lazy as _
-from geeks_ai_backend.models import ActivityTracking
-from geeks_ai_backend.managers import ActivityQuerySet
+from csvgpt.models import ActivityTracking
+from csvgpt.managers import ActivityQuerySet
 from chatbot.aws import S3
 
 class ChatbotFile(ActivityTracking):
