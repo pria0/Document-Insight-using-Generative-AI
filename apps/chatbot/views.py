@@ -74,7 +74,7 @@ class ChatView(APIView):
     def get(self, request, id, format=None):
         chatbot = self.get_object(request, id)
         serializer = ChatbotFetchSerializer(chatbot)
-        chat = [{ "role": "assistant", "content": "Hi! What can I help you with?" }]
+        chat = [{ "role": "assistant", "content": "Hi! 👋 What can I help you with?" }]
         return Response({ "chat": chat, "chatbot": serializer.data, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit }, status=status.HTTP_200_OK)
     
     def post(self, request, id, format=None):
