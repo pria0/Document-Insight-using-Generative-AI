@@ -2,7 +2,7 @@
   "apps": [{
     "name": "csvgpt",
     "script": "manage.py",
-    "args": ["runserver", "127.0.0.1:8000"],
+    "args": ["runserver", "0.0.0.0:8000"],
     "exec_mode": "fork",
     "instances": "1",
     "wait_ready": true,
