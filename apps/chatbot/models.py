@@ -61,6 +61,9 @@ class Chatbot(ActivityTracking):
     question_limit = models.IntegerField(help_text=_('Question limit'), 
                 verbose_name=_('Question limit'),
                 default=0)
+    open_ai_key = models.CharField(max_length=255,
+                help_text=_('Open ai key'), 
+                verbose_name=_('Open ai key'), default="")
     
     objects = ActivityQuerySet.as_manager()
 

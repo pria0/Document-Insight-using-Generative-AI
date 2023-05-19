@@ -1,3 +1,4 @@
+import os
 from django.conf import settings
 from django.shortcuts import render
 from django.http import Http404
@@ -75,12 +76,26 @@ class ChatView(APIView):
         chatbot = self.get_object(request, id)
         serializer = ChatbotFetchSerializer(chatbot)
         chat = [{ "role": "assistant", "content": "Hi! 👋 What can I help you with?" }]
-        return Response({ "chat": chat, "chatbot": serializer.data, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit }, status=status.HTTP_200_OK)
+        chatbot_data = serializer.data
+        os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
+        is_api_key_set = True if chatbot.open_ai_key else False
+        chatbot_data['is_api_key_set'] = is_api_key_set
+        return Response({ "chat": chat, "chatbot": chatbot_data, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit }, status=status.HTTP_200_OK)
+
+    def put(self, request, id, format=None):
+        chatbot = self.get_object(request, id)
+        chatbot.open_ai_key = request.data['open_ai_key']
+        chatbot.save()
+        return Response({ "message": "Key updated successfully" }, status=status.HTTP_200_OK)
     
     def post(self, request, id, format=None):
         chatbot = self.get_object(request, id)
         chat = request.data['chat']
         last_chat = chat.pop()
+
+        is_api_key_set = True if chatbot.open_ai_key else False
+        os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
+
         # chat_history = ", ".join([ c['content'] for c in chat[1:] if c['role'] == 'user' ])
         # PROMPT = f"""
         #     Take this list of chat history separated by comma {chat_history} as context.
@@ -89,9 +104,15 @@ class ChatView(APIView):
         #     Give answer of question only.
         # """
         # print(PROMPT)
-        if chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
+        print(f"Used ENV KEY & is_api_key_set :: {os.environ['OPENAI_API_KEY']} :: {is_api_key_set}")
+        if is_api_key_set:
+            print("Without Limit")
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": 0  }, status=status.HTTP_200_OK)
+        elif chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
+            print("With Limit")
             chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
             chatbot.question_limit += 1
             chatbot.save()
-            return Response({ "chat" : { "role": "assistant", "content": chat_response }, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)
+            return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)
         return Response({ "message": "You reached maximum chat question limit" }, status=status.HTTP_400_BAD_REQUEST)
