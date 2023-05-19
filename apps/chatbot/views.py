@@ -81,6 +81,14 @@ class ChatView(APIView):
         chatbot = self.get_object(request, id)
         chat = request.data['chat']
         last_chat = chat.pop()
+        # chat_history = ", ".join([ c['content'] for c in chat[1:] if c['role'] == 'user' ])
+        # PROMPT = f"""
+        #     Take this list of chat history separated by comma {chat_history} as context.
+        #     Question: {last_chat['content']} and give answer based on context.
+        #     if list is not provided or not relevant to context then give answer based on question only.
+        #     Give answer of question only.
+        # """
+        # print(PROMPT)
         if chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
             chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
             chatbot.question_limit += 1
