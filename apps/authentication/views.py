@@ -94,7 +94,7 @@ class GoogleLoginApi(PublicApiMixin, ApiErrorsMixin, APIView):
         # We don't have a sign-up flow.
         user, _ = user_get_or_create(**profile_data)
 
-        response = HttpResponseRedirect(settings.BASE_FRONTEND_URL)
+        response = HttpResponseRedirect(login_url)
         response = jwt_login(response=response, user=user)
 
         return response

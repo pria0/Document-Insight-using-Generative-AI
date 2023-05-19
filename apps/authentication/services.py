@@ -16,8 +16,6 @@ GOOGLE_USER_INFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
 def jwt_login(*, response, user):
     refresh = RefreshToken.for_user(user)
-    print(f"{refresh}")
-    print(f"{refresh.access_token}")
     response.set_cookie('refreshToken', value=f"{refresh}", max_age=3600, secure=True, samesite='None')
     response.set_cookie('accessToken', value=f"{refresh.access_token}", max_age=3600, secure=True, samesite='None')
     return response
