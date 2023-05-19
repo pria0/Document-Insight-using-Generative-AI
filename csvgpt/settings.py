@@ -36,7 +36,9 @@ SECRET_KEY = 'django-insecure-j&*!hjqs0=pvwzeqm&uwazufgdprly0^x9y0$4570g6u4^e^b_
 DEBUG = os.environ.get('DEBUG')
 
 ALLOWED_HOSTS = ['*', 'chatbotapidev.pythonanywhere.com']
-CSRF_TRUSTED_ORIGINS = ['http://*', 'https://*']
+
+CSRF_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = ['https://csvgpt.irfanraza.me']
 
 
 # Application definition
@@ -152,6 +154,7 @@ USE_I18N = True
 USE_TZ = True
 
 CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'authentication.Account'
 
