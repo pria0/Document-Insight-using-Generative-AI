@@ -73,13 +73,13 @@ class GoogleLoginApi(PublicApiMixin, ApiErrorsMixin, APIView):
 
         if error or not code:
             params = urlencode({'error': error})
-            return redirect(f'{login_url}?{params}')
+            return Response({"error": "error while login with google"}, status=status.HTTP_400_BAD_REQUEST)
 
         domain = settings.BASE_BACKEND_URL
         api_uri = reverse('authentication:login-with-google')
         redirect_uri = f'{domain}{api_uri}'
 
-        access_token = google_get_access_token(code=code, redirect_uri=redirect_uri)
+        access_token = google_get_access_token(code=code, redirect_uri=login_url)
 
         user_data = google_get_user_info(access_token=access_token)
 
@@ -97,4 +97,4 @@ class GoogleLoginApi(PublicApiMixin, ApiErrorsMixin, APIView):
         response = HttpResponseRedirect(login_url)
         response = jwt_login(response=response, user=user)
 
-        return response
+        return Response(response, status=status.HTTP_200_OK)

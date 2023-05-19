@@ -18,7 +18,7 @@ def jwt_login(*, response, user):
     refresh = RefreshToken.for_user(user)
     response.set_cookie('refreshToken', value=f"{refresh}", max_age=3600, secure=True, samesite='None')
     response.set_cookie('accessToken', value=f"{refresh.access_token}", max_age=3600, secure=True, samesite='None')
-    return response
+    return { "refresh": f"{refresh}",  "access": f"{refresh.access_token}" }
 
 
 def google_validate_id_token(*, id_token):
@@ -49,8 +49,10 @@ def google_get_access_token(*, code, redirect_uri):
         'grant_type': 'authorization_code'
     }
 
-    response = requests.post(GOOGLE_ACCESS_TOKEN_OBTAIN_URL, data=data)
+    print(data)
 
+    response = requests.post(GOOGLE_ACCESS_TOKEN_OBTAIN_URL, data=data)
+    print(response.json())
     if not response.ok:
         raise ValidationError('Failed to obtain access token from Google.')
 
