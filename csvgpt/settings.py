@@ -155,6 +155,10 @@ USE_TZ = True
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_COOKIE_NAMES = [
+    'refreshToken',
+    'accessToken',
+]
 
 AUTH_USER_MODEL = 'authentication.Account'
 
