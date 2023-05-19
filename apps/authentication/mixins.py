@@ -5,6 +5,12 @@ from django.core.exceptions import ValidationError
 
 from authentication.models import Account
 
+def get_first_matching_attr(obj, *attrs, default=None):
+    for attr in attrs:
+        if hasattr(obj, attr):
+            return getattr(obj, attr)
+
+    return default
 
 def get_error_message(exc):
     if hasattr(exc, 'message_dict'):
