@@ -18,8 +18,8 @@ def jwt_login(*, response, user):
     refresh = RefreshToken.for_user(user)
     print(f"{refresh}")
     print(f"{refresh.access_token}")
-    response.set_cookie('refreshToken', value=f"{refresh}", max_age=3600, secure=True, domain="csvgpt.web.app", samesite='None')
-    response.set_cookie('accessToken', value=f"{refresh.access_token}", max_age=3600, secure=True, domain="csvgpt.web.app", samesite='None')
+    response.set_cookie('refreshToken', value=f"{refresh}", max_age=3600, secure=True, samesite='None')
+    response.set_cookie('accessToken', value=f"{refresh.access_token}", max_age=3600, secure=True, samesite='None')
     return response
 
 
