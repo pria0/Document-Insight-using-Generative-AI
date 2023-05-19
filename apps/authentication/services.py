@@ -18,8 +18,8 @@ def jwt_login(*, response, user):
     refresh = RefreshToken.for_user(user)
     print(f"{refresh}")
     print(f"{refresh.access_token}")
-    response.set_cookie('refreshToken', f"{refresh}", samesite='Lax')
-    response.set_cookie('accessToken', f"{refresh.access_token}", samesite='Lax')
+    response.set_cookie('refreshToken', f"{refresh}")
+    response.set_cookie('accessToken', f"{refresh.access_token}")
     return response
 
 
