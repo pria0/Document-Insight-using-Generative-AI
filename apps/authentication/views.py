@@ -96,7 +96,4 @@ class GoogleLoginApi(PublicApiMixin, ApiErrorsMixin, APIView):
         response = redirect(settings.BASE_FRONTEND_URL)
         response = jwt_login(response=response, user=user)
 
-        print("=====Response====")
-        print(response)
-
         return response
