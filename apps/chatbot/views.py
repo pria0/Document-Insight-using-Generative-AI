@@ -63,7 +63,7 @@ class ChatView(APIView):
             raise Http404
 
     def conversational_chat(self, query, uploaded_file):
-        csv_agent = create_csv_agent(OpenAI(temperature=0), uploaded_file, verbose=False)
+        csv_agent = create_csv_agent(OpenAI(temperature=0), uploaded_file.replace(' ', '%20'), verbose=False)
         try:
             response= csv_agent.run(query)
         except Exception as e:
