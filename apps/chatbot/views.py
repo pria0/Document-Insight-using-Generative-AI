@@ -40,7 +40,7 @@ class ChatbotView(APIView):
     permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
-        chatbots = Chatbot.objects.filter(user=request.user)
+        chatbots = Chatbot.objects.isActive().filter(user=request.user)
         serializer = ChatbotFetchSerializer(chatbots, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -58,7 +58,7 @@ class ChatView(APIView):
 
     def get_object(self, request, id):
         try:
-            return Chatbot.objects.get(pk=id, user=request.user)
+            return Chatbot.objects.isActive().get(pk=id, user=request.user)
         except Chatbot.DoesNotExist:
             raise Http404
 
@@ -116,3 +116,10 @@ class ChatView(APIView):
             chatbot.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)
         return Response({ "message": "You reached maximum chat question limit" }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, id, format=None):
+        chatbot = self.get_object(request, id)
+        chatbot.active = False
+        chatbot.is_deleted = True
+        chatbot.save()
+        return Response({ "message": "chatbot deleted successfully" }, status=status.HTTP_200_OK)
