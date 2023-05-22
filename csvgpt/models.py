@@ -1,9 +1,11 @@
+import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 class ActivityTracking(models.Model):
     active = models.BooleanField(verbose_name=_('Active'), default=True)
     is_deleted = models.BooleanField(verbose_name=_('Is Deleted'), default=False)
+    uuid = models.UUIDField(verbose_name=_('Uuid'), default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(verbose_name=_('Created At'),
                     auto_now_add=True, help_text=_("Date when created."), null=True)
     updated_at = models.DateTimeField(verbose_name=_('Updated At'),
