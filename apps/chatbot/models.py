@@ -22,6 +22,22 @@ class ChatbotFile(ActivityTracking):
         verbose_name_plural = _("Chatbot Files")
         ordering = ['-created_at']
 
+class ChatbotDevice(ActivityTracking):
+    fingerprint = models.CharField(max_length=255,
+                help_text=_('Device Fingerprint'), 
+                verbose_name=_('Device Fingerprint'))
+    question_limit = models.IntegerField(help_text=_('Question limit'), 
+                verbose_name=_('Question limit'),
+                default=0)
+
+    def __str__(self):
+            return self.fingerprint
+
+    class Meta:
+        verbose_name = _("Chatbot devices")
+        verbose_name_plural = _("Chatbot devices")
+        ordering = ['-created_at']
+
 class Chatbot(ActivityTracking):
     CHATBOT_CATEGORIES = (
         ('1', _('Text')),
@@ -62,8 +78,10 @@ class Chatbot(ActivityTracking):
                 verbose_name=_('Question limit'),
                 default=0)
     open_ai_key = models.CharField(max_length=255,
+                blank=True, null=True,
                 help_text=_('Open ai key'), 
                 verbose_name=_('Open ai key'), default="")
+    is_demo = models.BooleanField(verbose_name=_('Is Demo'), default=False)
     
     objects = ActivityQuerySet.as_manager()
 
