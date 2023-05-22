@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from chatbot.models import Chatbot, ChatbotDevice
+from chatbot.models import Chatbot, ChatbotDevice, ChatbotFile
 from chatbot.serializers import ChatbotFileSerializer, ChatbotSerializer, ChatbotFetchSerializer
 from chatbot.aws import S3, getS3BucketKey
 
@@ -26,7 +26,7 @@ class ChatbotFileView(APIView):
         if serializer.is_valid():
             obj = serializer.save()
 
-            key = getS3BucketKey(obj.id, fileName)
+            key = getS3BucketKey(request.user.id, fileName)
             url = S3().get_presigned_url(key)
             pUrl = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
 
@@ -40,7 +40,10 @@ class ChatbotView(APIView):
     permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
-        chatbots = Chatbot.objects.isActive().filter(user=request.user, is_demo=False)
+        if request.user.is_superuser:
+            chatbots = Chatbot.objects.isActive().filter(user=request.user)
+        else:
+            chatbots = Chatbot.objects.isActive().filter(user=request.user, is_demo=False)
         serializer = ChatbotFetchSerializer(chatbots, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -117,6 +120,8 @@ class ChatView(APIView):
 
     def get_object(self, request, id):
         try:
+            if request.user.is_superuser:
+                return Chatbot.objects.isActive().get(pk=id, user=request.user)
             return Chatbot.objects.isActive().get(pk=id, user=request.user, is_demo=False)
         except Chatbot.DoesNotExist:
             raise Http404
@@ -144,6 +149,9 @@ class ChatView(APIView):
     def put(self, request, id, format=None):
         chatbot = self.get_object(request, id)
         chatbot.open_ai_key = request.data['open_ai_key']
+        bot_logo_id = request.data['bot_logo'] if 'bot_logo' in request.data.keys() else ''
+        if bot_logo_id:
+            chatbot.bot_logo = ChatbotFile.objects.get(id=bot_logo_id)
         chatbot.save()
         return Response({ "message": "Key updated successfully" }, status=status.HTTP_200_OK)
     

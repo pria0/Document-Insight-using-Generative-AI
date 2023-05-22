@@ -18,6 +18,7 @@ class ChatbotSerializer(serializers.ModelSerializer):
 
 class ChatbotFetchSerializer(serializers.ModelSerializer):
     file_urls = ChatbotFileSerializer(many=True, read_only=True)
+    bot_logo = ChatbotFileSerializer(read_only=True)
     class Meta:
         model = Chatbot
         fields = '__all__'

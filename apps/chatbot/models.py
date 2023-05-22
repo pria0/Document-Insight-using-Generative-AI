@@ -46,6 +46,12 @@ class Chatbot(ActivityTracking):
                 related_name='chatbot_file_urls',
                 help_text=_('Chatbot file urls'),
                 verbose_name=_('Chatbot file urls'))
+    bot_logo = models.ForeignKey('chatbot.ChatbotFile', blank=True,
+                related_name='chatbot_logo_url',
+                help_text=_('Chatbot logo url'),
+                verbose_name=_('Chatbot logo url'),
+                null=True,
+                on_delete=models.SET_NULL)
     category = models.CharField(max_length=11,
                 choices=CHATBOT_CATEGORIES,
                 help_text=_('Chatbot category'),
