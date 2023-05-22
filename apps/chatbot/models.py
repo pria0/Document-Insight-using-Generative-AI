@@ -22,21 +22,6 @@ class ChatbotFile(ActivityTracking):
         verbose_name_plural = _("Chatbot Files")
         ordering = ['-created_at']
 
-class ChatbotDevice(ActivityTracking):
-    fingerprint = models.CharField(max_length=255,
-                help_text=_('Device Fingerprint'), 
-                verbose_name=_('Device Fingerprint'))
-    question_limit = models.IntegerField(help_text=_('Question limit'), 
-                verbose_name=_('Question limit'),
-                default=0)
-
-    def __str__(self):
-            return self.fingerprint
-
-    class Meta:
-        verbose_name = _("Chatbot devices")
-        verbose_name_plural = _("Chatbot devices")
-        ordering = ['-created_at']
 
 class Chatbot(ActivityTracking):
     CHATBOT_CATEGORIES = (
@@ -91,4 +76,25 @@ class Chatbot(ActivityTracking):
     class Meta:
         verbose_name = _("Chatbot")
         verbose_name_plural = _("Chatbots")
+        ordering = ['-created_at']
+
+
+class ChatbotDevice(ActivityTracking):
+    fingerprint = models.CharField(max_length=255,
+                help_text=_('Device Fingerprint'), 
+                verbose_name=_('Device Fingerprint'))
+    question_limit = models.IntegerField(help_text=_('Question limit'), 
+                verbose_name=_('Question limit'),
+                default=0)
+    chatbot = models.ForeignKey('chatbot.Chatbot',
+                related_name='chatbot',
+                null=True,
+                on_delete=models.SET_NULL)
+
+    def __str__(self):
+            return self.fingerprint
+
+    class Meta:
+        verbose_name = _("Chatbot devices")
+        verbose_name_plural = _("Chatbot devices")
         ordering = ['-created_at']
