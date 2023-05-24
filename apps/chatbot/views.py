@@ -148,12 +148,11 @@ class ChatView(APIView):
 
     def put(self, request, id, format=None):
         chatbot = self.get_object(request, id)
-        chatbot.open_ai_key = request.data['open_ai_key']
-        bot_logo_id = request.data['bot_logo'] if 'bot_logo' in request.data.keys() else ''
-        if bot_logo_id:
-            chatbot.bot_logo = ChatbotFile.objects.get(id=bot_logo_id)
-        chatbot.save()
-        return Response({ "message": "Key updated successfully" }, status=status.HTTP_200_OK)
+        serializer = ChatbotSerializer(chatbot, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def post(self, request, id, format=None):
         chatbot = self.get_object(request, id)
@@ -190,3 +189,109 @@ class ChatView(APIView):
         chatbot.is_deleted = True
         chatbot.save()
         return Response({ "message": "chatbot deleted successfully" }, status=status.HTTP_200_OK)
+
+
+class IframeChatStylesView(APIView):
+    permission_classes = ()
+
+    def get_object(self, request, id):
+        try:
+            return Chatbot.objects.isActive().get(uuid=id, is_demo=False)
+        except Chatbot.DoesNotExist:
+            raise Http404
+
+    def get(self, request, format=None):
+        chatbotId = request.GET.get('chatbotId', '')
+        if not chatbotId:
+            return Response({ "message": "chtbot id not correct, please add valid chatbot id" }, status=status.HTTP_400_BAD_REQUEST)
+        chatbot = self.get_object(request, chatbotId)
+        serializer = ChatbotFetchSerializer(chatbot)
+        chat = [{ "role": "assistant", "content": "Hi! 👋 What can I help you with?" }]
+        chatbot_data = serializer.data
+        os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
+        is_api_key_set = True if chatbot.open_ai_key else False
+        chatbot_data['is_api_key_set'] = is_api_key_set
+        return Response({
+            "chat": chat,
+            "domains": chatbot.domains,
+            "is_api_key_set": is_api_key_set,
+            "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit,
+            "styles": {
+                "align_chat_button": chatbot.align_chat_button,
+                "auto_open_chat_window_after": chatbot.auto_open_chat_window_after,
+                "button_color": chatbot.button_color,
+                "chat_icon": chatbot.chat_icon if chatbot.chat_icon else "",
+                "display_name": chatbot.display_name if chatbot.display_name else "",
+                "theme": chatbot.theme,
+                "user_message_color": chatbot.user_message_color
+            },
+            "initialMessages": ["Hi! 👋 What can I help you with?"]
+        }, status=status.HTTP_200_OK)
+
+class IframeChatView(APIView):
+    permission_classes = ()
+
+    def get_object(self, request, id):
+        try:
+            return Chatbot.objects.isActive().get(uuid=id, is_demo=False)
+        except Chatbot.DoesNotExist:
+            raise Http404
+
+    def conversational_chat(self, query, uploaded_file):
+        csv_agent = create_csv_agent(OpenAI(temperature=0), uploaded_file.replace(' ', '%20'), verbose=False)
+        try:
+            response= csv_agent.run(query)
+        except Exception as e:
+            response = str(e)
+            if response.startswith("Could not parse LLM output: `"):
+                response = response.removeprefix("Could not parse LLM output: `").removesuffix("`")
+        return response
+
+    def get(self, request, id, format=None):
+        chatbot = self.get_object(request, id)
+        serializer = ChatbotFetchSerializer(chatbot)
+        chat = [{ "role": "assistant", "content": "Hi! 👋 What can I help you with?" }]
+        chatbot_data = serializer.data
+        os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
+        is_api_key_set = True if chatbot.open_ai_key else False
+        chatbot_data['is_api_key_set'] = is_api_key_set
+        return Response({
+            "chat": chat,
+            "is_api_key_set": is_api_key_set,
+            "domains": chatbot.domains,
+            "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit,
+            "styles": {
+                "align_chat_button": chatbot.align_chat_button,
+                "auto_open_chat_window_after": chatbot.auto_open_chat_window_after,
+                "button_color": chatbot.button_color,
+                "chat_icon": chatbot.chat_icon if chatbot.chat_icon else "",
+                "display_name": chatbot.display_name if chatbot.display_name else "",
+                "theme": chatbot.theme,
+                "user_message_color": chatbot.user_message_color
+            },
+            "initialMessages": ["Hi! 👋 What can I help you with?"]
+        }, status=status.HTTP_200_OK)
+    
+    def post(self, request, id, format=None):
+        chatbot = self.get_object(request, id)
+        if chatbot.domains:
+            if request.data['domain'] not in chatbot.domains.split('\n'):
+                return Response({ "message": "Domain is not valid" }, status=status.HTTP_400_BAD_REQUEST)
+        chat = request.data['chat']
+        last_chat = chat.pop()
+
+        is_api_key_set = True if chatbot.open_ai_key else False
+        os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
+
+        print(f"Used ENV KEY & is_api_key_set :: {os.environ['OPENAI_API_KEY']} :: {is_api_key_set}")
+        if is_api_key_set:
+            print("Without Limit")
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": 0  }, status=status.HTTP_200_OK)
+        elif chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
+            print("With Limit")
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            chatbot.question_limit += 1
+            chatbot.save()
+            return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)
+        return Response({ "message": "You reached maximum chat question limit" }, status=status.HTTP_400_BAD_REQUEST)
