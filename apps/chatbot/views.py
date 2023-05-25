@@ -225,7 +225,7 @@ class IframeChatStylesView(APIView):
                 "theme": chatbot.theme,
                 "user_message_color": chatbot.user_message_color
             },
-            "initialMessages": ["Hi! 👋 What can I help you with?"]
+            "initialMessages": chatbot.initial_messages.split('\n') if chatbot.initial_messages else ["Hi! 👋 What can I help you with?"]
         }, status=status.HTTP_200_OK)
 
 class IframeChatView(APIView):
@@ -269,7 +269,7 @@ class IframeChatView(APIView):
                 "theme": chatbot.theme,
                 "user_message_color": chatbot.user_message_color
             },
-            "initialMessages": ["Hi! 👋 What can I help you with?"]
+            "initialMessages": chatbot.initial_messages.split('\n') if chatbot.initial_messages else ["Hi! 👋 What can I help you with?"]
         }, status=status.HTTP_200_OK)
     
     def post(self, request, id, format=None):

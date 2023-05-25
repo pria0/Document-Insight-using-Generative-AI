@@ -85,7 +85,8 @@ class Chatbot(ActivityTracking):
     is_demo = models.BooleanField(verbose_name=_('Is Demo'), default=False)
     initial_messages = models.TextField(blank=True, null=True,
                 help_text=_('Chatbot initial messages'),
-                verbose_name=_('Chatbot initial messages'))
+                verbose_name=_('Chatbot initial messages'),
+                default="Hi! 👋 What can I help you with?")
     align_chat_button = models.CharField(max_length=11,
                 choices=ALIGN_CHAT_BUTTON,
                 help_text=_('Align chat button'),
