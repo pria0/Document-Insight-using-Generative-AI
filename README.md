@@ -7,6 +7,10 @@
 ### Install dependency
 - pip install -r requirements.txt
 
+### Create new app or module
+- Go to app folder
+- python ../manage.py startapp app_name
+
 ### Run migrations
 - python manage.py migrate
 
