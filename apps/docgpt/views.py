@@ -95,9 +95,14 @@ class DemoDocChatView(APIView):
             return DocChatbot.objects.isActive().get(pk=id, is_demo=True)
         except DocChatbot.DoesNotExist:
             raise Http404
+    
+    def create_chat_history(self, chat):
+        chat_prompt = [c['content'] for c in chat if c['role'] == 'user']
+        chat_answer = [c['content'] for c in chat if c['role'] == 'assistant']
+        return list(zip(chat_prompt, chat_answer))
 
-    def conversational_chat(self, query, chatbot_id):
-        response = run_llm(query, f"faiss_index_{chatbot_id}")
+    def conversational_chat(self, query, chatbot_id, chat_history):
+        response = run_llm(query, f"faiss_index_{chatbot_id}", chat_history)
         return response['answer']
 
     def get(self, request, id, format=None):
@@ -123,7 +128,9 @@ class DemoDocChatView(APIView):
 
         chatbot_device = DocChatbotDevice.objects.get(fingerprint=fingerprint, chatbot__id=id)
         if chatbot_device.question_limit < settings.DEMO_CHATBOT_QUESTION_LIMIT:
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.id)
+            chat_history = self.create_chat_history(chat[1:])
+            print(chat_history)
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.id, chat_history)
             chatbot_device.question_limit += 1
             chatbot_device.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": False, "question_limit": settings.DEMO_CHATBOT_QUESTION_LIMIT - chatbot_device.question_limit  }, status=status.HTTP_200_OK)
@@ -141,8 +148,13 @@ class DocChatView(APIView):
         except DocChatbot.DoesNotExist:
             raise Http404
 
-    def conversational_chat(self, query, chatbot_id):
-        response = run_llm(query, f"faiss_index_{chatbot_id}")
+    def create_chat_history(self, chat):
+        chat_prompt = [c['content'] for c in chat if c['role'] == 'user']
+        chat_answer = [c['content'] for c in chat if c['role'] == 'assistant']
+        return list(zip(chat_prompt, chat_answer))
+
+    def conversational_chat(self, query, chatbot_id, chat_history):
+        response = run_llm(query, f"faiss_index_{chatbot_id}", chat_history)
         return response['answer']
 
     def get(self, request, id, format=None):
@@ -171,13 +183,17 @@ class DocChatView(APIView):
         is_api_key_set = True if chatbot.open_ai_key else False
         os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
         print(f"Used ENV KEY & is_api_key_set :: {os.environ['OPENAI_API_KEY']} :: {is_api_key_set}")
+
+        chat_history = self.create_chat_history(chat[1:])
+        print(chat_history)
+
         if is_api_key_set:
             print("Without Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.id)
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.id, chat_history)
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": 0  }, status=status.HTTP_200_OK)
         elif chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
             print("With Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.id)
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.id, chat_history)
             chatbot.question_limit += 1
             chatbot.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)
@@ -236,9 +252,14 @@ class IframeDocChatView(APIView):
             return DocChatbot.objects.isActive().get(uuid=id, is_demo=False)
         except DocChatbot.DoesNotExist:
             raise Http404
+    
+    def create_chat_history(self, chat):
+        chat_prompt = [c['content'] for c in chat if c['role'] == 'user']
+        chat_answer = [c['content'] for c in chat if c['role'] == 'assistant']
+        return list(zip(chat_prompt, chat_answer))
 
-    def conversational_chat(self, query, chatbot_id):
-        response = run_llm(query, f"faiss_index_{chatbot_id}")
+    def conversational_chat(self, query, chatbot_id, chat_history):
+        response = run_llm(query, f"faiss_index_{chatbot_id}", chat_history)
         return response['answer']
 
     def get(self, request, id, format=None):
@@ -278,13 +299,17 @@ class IframeDocChatView(APIView):
         os.environ["OPENAI_API_KEY"] = chatbot.open_ai_key if chatbot.open_ai_key else settings.OPENAI_API_KEY
 
         print(f"Used ENV KEY & is_api_key_set :: {os.environ['OPENAI_API_KEY']} :: {is_api_key_set}")
+
+        chat_history = self.create_chat_history(chat[1:])
+        print(chat_history)
+
         if is_api_key_set:
             print("Without Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.id)
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.id, chat_history)
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": 0  }, status=status.HTTP_200_OK)
         elif chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
             print("With Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.id)
+            chat_response = self.conversational_chat(last_chat['content'], chatbot.id, chat_history)
             chatbot.question_limit += 1
             chatbot.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)

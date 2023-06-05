@@ -71,6 +71,9 @@ class GoogleLoginApi(PublicApiMixin, ApiErrorsMixin, APIView):
 
         login_url = f'{settings.BASE_FRONTEND_URL}/signin'
 
+        if request.headers['Origin'] == settings.BASE_DOC_GPT_FRONTEND_URL:
+            login_url = f'{settings.BASE_DOC_GPT_FRONTEND_URL}/signin'
+
         if error or not code:
             params = urlencode({'error': error})
             return Response({"error": "error while login with google"}, status=status.HTTP_400_BAD_REQUEST)
