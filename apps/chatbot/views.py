@@ -87,7 +87,8 @@ class DemoChatView(APIView):
 
     def get(self, request, id, format=None):
         fingerprint = request.GET.get('fingerprint', '')
-        isHomePage = request.GET.get('isHomePage', '')
+        isHomePage = request.GET.get('isHomePage', '') == 'true'
+        print(isHomePage)
         chatbot = self.get_object(request, id)
         if isHomePage and not ChatbotDevice.objects.filter(fingerprint=fingerprint, chatbot__id=id).exists():
             obj, created = ChatbotDevice.objects.update_or_create(fingerprint=fingerprint, chatbot=chatbot)
