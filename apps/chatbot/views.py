@@ -87,9 +87,13 @@ class DemoChatView(APIView):
 
     def get(self, request, id, format=None):
         fingerprint = request.GET.get('fingerprint', '')
-        if not ChatbotDevice.objects.filter(fingerprint=fingerprint, chatbot__id=id).exists():
-            return Response({ "status": status.HTTP_400_BAD_REQUEST, "message": "Device fingerprint not matched" }, status=status.HTTP_200_OK)
+        isHomePage = request.GET.get('isHomePage', '')
         chatbot = self.get_object(request, id)
+        if isHomePage and not ChatbotDevice.objects.filter(fingerprint=fingerprint, chatbot__id=id).exists():
+            obj, created = ChatbotDevice.objects.update_or_create(fingerprint=fingerprint, chatbot=chatbot)
+        elif not ChatbotDevice.objects.filter(fingerprint=fingerprint, chatbot__id=id).exists():
+            return Response({ "status": status.HTTP_400_BAD_REQUEST, "message": "Device fingerprint not matched" }, status=status.HTTP_200_OK)
+
         serializer = ChatbotFetchSerializer(chatbot)
         chat = [{ "role": "assistant", "content": "Hi! 👋 What can I help you with?" }]
         chatbot_data = serializer.data
