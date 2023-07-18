@@ -124,6 +124,12 @@ class Chatbot(ActivityTracking):
     domains = models.TextField(blank=True, null=True,
                 help_text=_('Chatbot allowed domains'),
                 verbose_name=_('Chatbot allowed domains'))
+    base_prompt_message = models.TextField(blank=True, null=True,
+                help_text=_('Chatbot base prompt message'),
+                verbose_name=_('Chatbot base prompt message'))
+    second_base_prompt_message = models.TextField(blank=True, null=True,
+                help_text=_('Chatbot second base prompt message'),
+                verbose_name=_('Chatbot second base prompt message'))
     
     objects = ActivityQuerySet.as_manager()
 
