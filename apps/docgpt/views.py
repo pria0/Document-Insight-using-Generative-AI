@@ -282,7 +282,8 @@ class IframeDocChatView(APIView):
                 "chat_icon": chatbot.chat_icon if chatbot.chat_icon else "",
                 "display_name": chatbot.display_name if chatbot.display_name else "",
                 "theme": chatbot.theme,
-                "user_message_color": chatbot.user_message_color
+                "user_message_color": chatbot.user_message_color,
+                "logo": chatbot.bot_logo.url if chatbot.bot_logo else ""
             },
             "initialMessages": chatbot.initial_messages.split('\n') if chatbot.initial_messages else ["Hi! 👋 What can I help you with?"]
         }, status=status.HTTP_200_OK)
