@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from chatbot.models import ChatbotFile, Chatbot
-from chatbot.aws import S3
 
 class ChatbotFileSerializer(serializers.ModelSerializer):
 

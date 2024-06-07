@@ -10,12 +10,8 @@ from rest_framework import status
 
 from docgpt.models import DocChatbot, DocChatbotDevice, DocChatbotFile
 from docgpt.serializers import DocChatbotFileSerializer, DocChatbotSerializer, DocChatbotFetchSerializer
-from chatbot.aws import S3, getS3BucketKey
 
-from langchain.agents import create_csv_agent
-from langchain.llms import OpenAI
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
@@ -23,40 +19,33 @@ from langchain.vectorstores import FAISS
 from docgpt.core import run_llm
 
 class DocgptFileView(APIView):
-    permission_classes = (IsAuthenticated, )
 
     def post(self, request):
-        fileName = request.data['fileName']
-        textFileName = f"{fileName.split('.')[0]}.txt"
-        serializer = DocChatbotFileSerializer(data={ 'name': fileName })
+        requestFile = request.FILES.get('uploadFile')
+        serializer = DocChatbotFileSerializer(data={ 'name': requestFile.name, 'file': requestFile })
         if serializer.is_valid():
             obj = serializer.save()
-
-            key = getS3BucketKey(request.user.id, textFileName)
-            url = S3().get_presigned_url(key)
-            pUrl = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
-
-            obj.url = pUrl
+            obj.url = obj.file.url
             obj.save()
-            return Response({ 'sUrl': url, 'fileId': obj.id, 'pUrl': pUrl }, status=status.HTTP_201_CREATED)
+            return Response({ 'sUrl': obj.file.url, 'fileId': obj.id, 'pUrl': obj.file.url }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DocgptbotView(APIView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = ()
 
     def get(self, request, format=None):
         if request.user.is_superuser:
             chatbots = DocChatbot.objects.isActive().filter(user=request.user)
         else:
-            chatbots = DocChatbot.objects.isActive().filter(user=request.user, is_demo=False)
+            chatbots = DocChatbot.objects.isActive().filter(is_demo=False)
         serializer = DocChatbotFetchSerializer(chatbots, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def train_model(self, chatbot_data):
         if chatbot_data:
             files = DocChatbotFile.objects.filter(id__in=chatbot_data['file_urls'])
-            urls = [url.url for url in files]
+            urls = [f"{settings.LOCAL_HOST_PORT}{file.url}" for file in files]
             loader = UnstructuredURLLoader(urls=urls)
             data = loader.load()
             text_splitter = RecursiveCharacterTextSplitter(
@@ -68,7 +57,6 @@ class DocgptbotView(APIView):
             vectorstore.save_local(f"faiss_index_{chatbot_data['id']}")
     
     def post(self, request, format=None):
-        request.data['user'] = request.user.id
         serializer = DocChatbotSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -77,7 +65,6 @@ class DocgptbotView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class DocgptbotDemoView(APIView):
-    permission_classes = ()
     def post(self, request, format=None):
         fingerprint = request.data['fingerprint'] if 'fingerprint' in request.data.keys() else ''
         chatbots = DocChatbot.objects.isActive().filter(is_demo=True)
@@ -88,7 +75,6 @@ class DocgptbotDemoView(APIView):
 
 
 class DemoDocChatView(APIView):
-    permission_classes = ()
 
     def get_object(self, request, id):
         try:
@@ -138,13 +124,12 @@ class DemoDocChatView(APIView):
 
 
 class DocChatView(APIView):
-    permission_classes = (IsAuthenticated, )
 
     def get_object(self, request, id):
         try:
             if request.user.is_superuser:
                 return DocChatbot.objects.isActive().get(pk=id, user=request.user)
-            return DocChatbot.objects.isActive().get(pk=id, user=request.user, is_demo=False)
+            return DocChatbot.objects.isActive().get(pk=id, is_demo=False)
         except DocChatbot.DoesNotExist:
             raise Http404
 
@@ -208,7 +193,6 @@ class DocChatView(APIView):
 
 
 class IframeChatStylesView(APIView):
-    permission_classes = ()
 
     def get_object(self, request, id):
         try:
@@ -245,7 +229,6 @@ class IframeChatStylesView(APIView):
         }, status=status.HTTP_200_OK)
 
 class IframeDocChatView(APIView):
-    permission_classes = ()
 
     def get_object(self, request, id):
         try:

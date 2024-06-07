@@ -10,45 +10,35 @@ from rest_framework import status
 
 from chatbot.models import Chatbot, ChatbotDevice, ChatbotFile
 from chatbot.serializers import ChatbotFileSerializer, ChatbotSerializer, ChatbotFetchSerializer
-from chatbot.aws import S3, getS3BucketKey
 
 from langchain.agents import create_csv_agent
-from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
 # Create your views here.
 
 class ChatbotFileView(APIView):
-    permission_classes = (IsAuthenticated, )
 
     def post(self, request):
-        fileName = request.data['fileName']
-        serializer = ChatbotFileSerializer(data={ 'name': fileName })
+        requestFile = request.FILES.get('uploadFile')
+        serializer = ChatbotFileSerializer(data={ 'name': requestFile.name, 'file': requestFile })
         if serializer.is_valid():
             obj = serializer.save()
-
-            key = getS3BucketKey(request.user.id, fileName)
-            url = S3().get_presigned_url(key)
-            pUrl = f"{settings.AWS_S3_ENDPOINT_URL}/{settings.AWS_STORAGE_BUCKET_NAME}/{key}"
-
-            obj.url = pUrl
+            obj.url = obj.file.url
             obj.save()
-            return Response({ 'sUrl': url, 'fileId': obj.id, 'pUrl': pUrl }, status=status.HTTP_201_CREATED)
+            return Response({ 'sUrl': obj.file.url, 'fileId': obj.id, 'pUrl': obj.file.url }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChatbotView(APIView):
-    permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
         if request.user.is_superuser:
             chatbots = Chatbot.objects.isActive().filter(user=request.user)
         else:
-            chatbots = Chatbot.objects.isActive().filter(user=request.user, is_demo=False)
+            chatbots = Chatbot.objects.isActive().filter(is_demo=False)
         serializer = ChatbotFetchSerializer(chatbots, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request, format=None):
-        request.data['user'] = request.user.id
         serializer = ChatbotSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -56,7 +46,6 @@ class ChatbotView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ChatbotDemoView(APIView):
-    permission_classes = ()
     def post(self, request, format=None):
         fingerprint = request.data['fingerprint'] if 'fingerprint' in request.data.keys() else ''
         chatbots = Chatbot.objects.isActive().filter(is_demo=True)
@@ -67,7 +56,6 @@ class ChatbotDemoView(APIView):
 
 
 class DemoChatView(APIView):
-    permission_classes = ()
 
     def get_object(self, request, id):
         try:
@@ -76,7 +64,8 @@ class DemoChatView(APIView):
             raise Http404
 
     def conversational_chat(self, query, uploaded_file):
-        csv_agent = create_csv_agent(OpenAI(temperature=0), uploaded_file.replace(' ', '%20'), verbose=False)
+        print(uploaded_file.replace(' ', '%20'))
+        csv_agent = create_csv_agent(ChatOpenAI(temperature=0, model_name="gpt-4"), uploaded_file.replace(' ', '%20'), verbose=False)
         try:
             response= csv_agent.run(query)
         except Exception as e:
@@ -112,7 +101,7 @@ class DemoChatView(APIView):
 
         chatbot_device = ChatbotDevice.objects.get(fingerprint=fingerprint, chatbot__id=id)
         if chatbot_device.question_limit < settings.DEMO_CHATBOT_QUESTION_LIMIT:
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            chat_response = self.conversational_chat(last_chat['content'], f"{settings.LOCAL_HOST_PORT}{chatbot.file_urls.all()[0].url}")
             chatbot_device.question_limit += 1
             chatbot_device.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": False, "question_limit": settings.DEMO_CHATBOT_QUESTION_LIMIT - chatbot_device.question_limit  }, status=status.HTTP_200_OK)
@@ -120,18 +109,17 @@ class DemoChatView(APIView):
 
 
 class ChatView(APIView):
-    permission_classes = (IsAuthenticated, )
 
     def get_object(self, request, id):
         try:
             if request.user.is_superuser:
                 return Chatbot.objects.isActive().get(pk=id, user=request.user)
-            return Chatbot.objects.isActive().get(pk=id, user=request.user, is_demo=False)
+            return Chatbot.objects.isActive().get(pk=id, is_demo=False)
         except Chatbot.DoesNotExist:
             raise Http404
 
     def conversational_chat(self, query, uploaded_file):
-        csv_agent = create_csv_agent(OpenAI(temperature=0), uploaded_file.replace(' ', '%20'), verbose=False)
+        csv_agent = create_csv_agent(ChatOpenAI(temperature=0, model_name="gpt-4"), uploaded_file.replace(' ', '%20'), verbose=False)
         try:
             response= csv_agent.run(query)
         except Exception as e:
@@ -177,11 +165,11 @@ class ChatView(APIView):
         print(f"Used ENV KEY & is_api_key_set :: {os.environ['OPENAI_API_KEY']} :: {is_api_key_set}")
         if is_api_key_set:
             print("Without Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            chat_response = self.conversational_chat(last_chat['content'], f"{settings.LOCAL_HOST_PORT}{chatbot.file_urls.all()[0].url}")
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": 0  }, status=status.HTTP_200_OK)
         elif chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
             print("With Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            chat_response = self.conversational_chat(last_chat['content'], f"{settings.LOCAL_HOST_PORT}{chatbot.file_urls.all()[0].url}")
             chatbot.question_limit += 1
             chatbot.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)
@@ -196,7 +184,6 @@ class ChatView(APIView):
 
 
 class IframeChatStylesView(APIView):
-    permission_classes = ()
 
     def get_object(self, request, id):
         try:
@@ -233,7 +220,6 @@ class IframeChatStylesView(APIView):
         }, status=status.HTTP_200_OK)
 
 class IframeChatView(APIView):
-    permission_classes = ()
 
     def get_object(self, request, id):
         try:
@@ -242,7 +228,7 @@ class IframeChatView(APIView):
             raise Http404
 
     def conversational_chat(self, query, uploaded_file):
-        csv_agent = create_csv_agent(OpenAI(temperature=0), uploaded_file.replace(' ', '%20'), verbose=False)
+        csv_agent = create_csv_agent(ChatOpenAI(temperature=0, model_name="gpt-4"), uploaded_file.replace(' ', '%20'), verbose=False)
         try:
             response= csv_agent.run(query)
         except Exception as e:
@@ -290,11 +276,11 @@ class IframeChatView(APIView):
         print(f"Used ENV KEY & is_api_key_set :: {os.environ['OPENAI_API_KEY']} :: {is_api_key_set}")
         if is_api_key_set:
             print("Without Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            chat_response = self.conversational_chat(last_chat['content'], f"{settings.LOCAL_HOST_PORT}{chatbot.file_urls.all()[0].url}")
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": 0  }, status=status.HTTP_200_OK)
         elif chatbot.question_limit < settings.CHATBOT_QUESTION_LIMIT:
             print("With Limit")
-            chat_response = self.conversational_chat(last_chat['content'], chatbot.file_urls.all()[0].url)
+            chat_response = self.conversational_chat(last_chat['content'], f"{settings.LOCAL_HOST_PORT}{chatbot.file_urls.all()[0].url}")
             chatbot.question_limit += 1
             chatbot.save()
             return Response({ "chat" : { "role": "assistant", "content": chat_response }, "is_api_key_set": is_api_key_set, "question_limit": settings.CHATBOT_QUESTION_LIMIT - chatbot.question_limit  }, status=status.HTTP_200_OK)

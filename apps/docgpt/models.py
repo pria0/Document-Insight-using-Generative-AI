@@ -4,7 +4,6 @@ from django.db.models.signals import pre_delete
 from django.utils.translation import gettext_lazy as _
 from csvgpt.models import ActivityTracking
 from csvgpt.managers import ActivityQuerySet
-from chatbot.aws import S3
 
 class DocChatbotFile(ActivityTracking):
     name = models.CharField(max_length=255,
@@ -13,6 +12,7 @@ class DocChatbotFile(ActivityTracking):
     url = models.TextField(blank=True, null=True,
                 help_text=_('File URL'),
                 verbose_name=_('File URL'))
+    file = models.FileField(upload_to='uploads/', null=True, blank=True)
     num_of_characters = models.IntegerField(help_text=_('Number of characters'), 
                 verbose_name=_('Number of characters'),
                 default=0)
@@ -44,6 +44,8 @@ class DocChatbot(ActivityTracking):
 
     user = models.ForeignKey('authentication.Account',
                 related_name='doc_gpt_user',
+                null=True,
+                blank=True,
                 on_delete=models.CASCADE)
     name = models.CharField(max_length=128,
                 help_text=_('Chatbot name'), 

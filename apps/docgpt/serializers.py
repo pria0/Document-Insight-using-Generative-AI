@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from docgpt.models import DocChatbotFile, DocChatbot
-from chatbot.aws import S3
 
 class DocChatbotFileSerializer(serializers.ModelSerializer):
 
